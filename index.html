@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<form id="payment-form" method="POST" action="#">
+    <input type="text" name="card-number" id="card-number" placeholder="cardNumber"><br><br>
+    <input type="text" name="exp-month" id="exp-month" placeholder="expMonth"><br><br>
+    <input type="text" name="exp-year" id="exp-year" placeholder="expYear"><br><br>
+    <input type="text" name="card-code" id="card-code" placeholder="cardCode"><br><br>
+    <input type="hidden" name="data-value" id="data-value">
+    <input type="hidden" name="data-descriptor" id="data-descriptor">
+    <button type="submit">Pay</button>
+</form>
+
+<script type="text/javascript" src="https://jstest.authorize.net/v1/Accept.js" charset="utf-8"></script>
+<script type="text/javascript" charset="utf-8">
+	function ready() {
+		async function sendPost(url, data) {
+			const response = await fetch(url, {
+				method: 'POST',
+                mode: 'cors',
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(data)
+			});
+
+			return await response.json();
+		}
+
+		function responseHandler(response) {
+			if (response.messages.resultCode === 'Error') {
+				response.messages.message.forEach(function (message) {
+					console.log(message.code + ':' + message.text);
+				});
+
+				alert('An error was occurred!')
+			} else {
+				console.log(response.opaqueData.dataDescriptor);
+				console.log(response.opaqueData.dataValue);
+
+				console.dir(JSON.stringify(response.opaqueData));
+
+				sendPost('https://localhost:12443', {
+					data_descriptor: response.opaqueData.dataDescriptor,
+                    data_value: response.opaqueData.dataValue
+                }).then(data => {
+                    console.log(data);
+
+                    alert('Success!');
+                });
+			}
+		}
+
+		function receiveOneTimeToken(event) {
+			event.preventDefault();
+
+			let secureData = {};
+			let authData = {};
+			let cardData = {};
+
+			cardData.cardNumber = document.getElementById('card-number').value;
+			cardData.cardCode = document.getElementById('card-code').value;
+			cardData.month = document.getElementById('exp-month').value;
+			cardData.year = document.getElementById('exp-year').value;
+			secureData.cardData = cardData;
+
+			authData.clientKey = '8rsrrPXWFEt3Ds8NK9UkV2q397q7KXTrCW9R9gqcJD4Hc52G5eKj9FVt38X3y4LE';
+			authData.apiLoginID = '6h5w25tM7JV';
+			secureData.authData = authData;
+
+			Accept.dispatchData(secureData, responseHandler);
+		}
+
+		let form = document.getElementById('payment-form');
+
+		form.addEventListener('submit', receiveOneTimeToken);
+	}
+
+	document.addEventListener('DOMContentLoaded', ready);
+</script>
+</body>
+</html>
